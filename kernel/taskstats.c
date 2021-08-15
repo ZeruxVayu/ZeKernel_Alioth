@@ -418,7 +418,9 @@ static void sysstats_fill_zoneinfo(struct sys_memstats *stats)
 	pg_data_t *pgdat;
 	struct zone *zone;
 	struct zone *node_zones;
+#if defined(CONFIG_SWAP) && defined(CONFIG_ZRAM)
 	unsigned long zspages = 0;
+#endif
 
 	pgdat = NODE_DATA(0);
 	node_zones = pgdat->node_zones;
@@ -427,7 +429,9 @@ static void sysstats_fill_zoneinfo(struct sys_memstats *stats)
 		if (!populated_zone(zone))
 			continue;
 
+#if defined(CONFIG_SWAP) && defined(CONFIG_ZRAM)
 		zspages += zone_page_state(zone, NR_ZSPAGES);
+#endif
 		if (!strcmp(zone->name, "DMA")) {
 			stats->dma_nr_free_pages =
 				K(zone_page_state(zone, NR_FREE_PAGES));
@@ -474,7 +478,9 @@ static void sysstats_fill_zoneinfo(struct sys_memstats *stats)
 				K(zone_page_state(zone, NR_ZONE_INACTIVE_FILE));
 		}
 	}
+#if defined(CONFIG_SWAP) && defined(CONFIG_ZRAM)
 	stats->zram_compressed = K(zspages);
+#endif
 }
 #elif
 static void sysstats_fill_zoneinfo(struct sys_memstats *stats)
