@@ -1462,6 +1462,23 @@ out_bypass_end:
 	if (pd_prealloc)
 		pol->pd_free_fn(pd_prealloc);
 	return ret;
+
+enomem:
+	/* alloc failed, nothing's initialized yet, free everything */
+	spin_lock_irq(&q->queue_lock);
+	list_for_each_entry(blkg, &q->blkg_list, q_node) {
+		struct blkcg *blkcg = blkg->blkcg;
+
+		spin_lock(&blkcg->lock);
+		if (blkg->pd[pol->plid]) {
+			pol->pd_free_fn(blkg->pd[pol->plid]);
+			blkg->pd[pol->plid] = NULL;
+		}
+		spin_unlock(&blkcg->lock);
+	}
+	spin_unlock_irq(&q->queue_lock);
+	ret = -ENOMEM;
+	goto out;
 }
 EXPORT_SYMBOL_GPL(blkcg_activate_policy);
 
@@ -1491,12 +1508,16 @@ void blkcg_deactivate_policy(struct request_queue *q,
 	__clear_bit(pol->plid, q->blkcg_pols);
 
 	list_for_each_entry(blkg, &q->blkg_list, q_node) {
+		struct blkcg *blkcg = blkg->blkcg;
+
+		spin_lock(&blkcg->lock);
 		if (blkg->pd[pol->plid]) {
 			if (pol->pd_offline_fn)
 				pol->pd_offline_fn(blkg->pd[pol->plid]);
 			pol->pd_free_fn(blkg->pd[pol->plid]);
 			blkg->pd[pol->plid] = NULL;
 		}
+		spin_unlock(&blkcg->lock);
 	}
 
 	spin_unlock_irq(q->queue_lock);
