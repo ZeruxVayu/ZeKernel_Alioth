@@ -4,8 +4,11 @@
 
 KERNEL_DEFCONFIG=vendor/alioth_defconfig
 ANYKERNEL3_DIR=$PWD/AnyKernel3/
-FINAL_KERNEL_ZIP=Optimus_Drunk_Alioth_v11.19.zip
+FINAL_KERNEL_ZIP=ZeKernel_v1.1.zip
 export ARCH=arm64
+KERNEL_DIR=$(pwd)
+PARENT_DIR="$(dirname "$KERNEL_DIR")"
+KERN_IMG=/home/zerux/out/arch/arm64/boot/Image.gz
 
 # Speed up build process
 MAKE="./makeparallel"
@@ -20,17 +23,29 @@ echo -e "$yellow**** Cleaning ****$nocol"
 mkdir -p out
 make O=out clean
 
+# Build kernel
+export PATH="$PARENT_DIR/proton-clang/bin:$PATH"
+export LD_LIBRARY_PATH="$PARENT_DIR/proton-clang/lib:$LD_LIBRARY_PATH"
+export KBUILD_BUILD_USER="Zerux31"
+export KBUILD_BUILD_HOST="Ryzen5-3600x16gbram"
+export TZ="Europe/Paris"
+
 echo -e "$yellow**** Kernel defconfig is set to $KERNEL_DEFCONFIG ****$nocol"
 echo -e "$blue***********************************************"
 echo "          BUILDING KERNEL          "
 echo -e "***********************************************$nocol"
 make $KERNEL_DEFCONFIG O=out
 make -j$(nproc --all) O=out \
-                      ARCH=arm64 \
-                      CC=$KERNELDIR/prebuilts/clang-r433403/bin/clang \
-                      CLANG_TRIPLE=aarch64-linux-gnu- \
-                      CROSS_COMPILE=$KERNELDIR/prebuilts/aarch64-linux-android-4.9/bin/aarch64-linux-android- \
-                      CROSS_COMPILE_ARM32=$KERNELDIR/prebuilts/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-
+                          ARCH=arm64 \
+                          CC=clang \
+                          LD=ld.lld \
+                          AR="llvm-ar" \
+                          NM="llvm-nm" \
+                          OBJCOPY="llvm-objcopy" \
+                          OBJDUMP="llvm-objdump" \
+                          STRIP="llvm-strip" \
+                          CROSS_COMPILE=aarch64-linux-gnu- \
+                          CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
 echo -e "$yellow**** Verify Image.gz-dtb & dtbo.img ****$nocol"
 ls $PWD/out/arch/arm64/boot/Image.gz-dtb
